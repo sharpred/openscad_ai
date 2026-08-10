@@ -1,5 +1,109 @@
 # Agent Instructions
 
+These rules apply to EVERY agent, every session. Role-specific orders live in
+each agent's own prompt file under `.opencode/agents/`.
+
+## Project
+
+This is an OpenSCAD project.
+
+The user normally designs parts for a Bambu Lab A1 FDM printer.
+Project-specific printer information is in printer.yaml.
+
+Read printer.yaml before making manufacturing decisions.
+
+
+## Hard rules (non-negotiable)
+- Never delete files or run destructive shell commands (rm, git reset --hard,
+  force push, DB drops) — human confirmation required.
+- Never modify CI/deploy config or `.env` without explicit human approval.
+- Never add a dependency without stating why in plain language first.
+- If a change would touch more than a handful of files, stop and re-plan.
+
+## Conventions
+- Match existing code style; don't reformat unrelated lines.
+- Every new behaviour needs a test (Tester writes/updates; Dev makes it pass).
+  Tests for API code use mocks/sandbox, never live credentials.
+- Explain non-obvious decisions in one sentence in the commit message.
+
+## Communication
+- Be terse. State what you did and what's next.
+- If blocked, unsure, or about to touch anything that writes to the API or
+  handles a secret, STOP and surface it to the orchestrator.
+
+## OpenSCAD
+
+OpenSCAD is the source of truth for whether a model compiles.
+
+When modifying `.scad` files:
+- Preserve existing functionality.
+- Prefer parameterised designs.
+- Run OpenSCAD validation where practical.
+- Consider FDM printability and tolerances.
+
+## AI models
+
+The project's Ollama server is available on the network.
+
+Use:
+- `openscad-design` for generating and modifying OpenSCAD.
+- `openscad-critic` for independent review.
+
+The designer should not assume its own output is correct.
+
+For significant geometry changes:
+1. Generate the change.
+2. Validate with OpenSCAD.
+3. Send the result to `openscad-critic`.
+4. Address genuine issues identified by the critic.
+5. Revalidate.
+
+## Design acceptance
+
+A design task is not complete merely because the OpenSCAD source compiles.
+
+Before closing a design issue:
+- Verify that the geometry fulfils the physical function described in the task.
+- Check each explicit acceptance criterion.
+- Consider how the physical part will actually be assembled, installed and used.
+- Do not infer that geometrically valid means functionally correct.
+- If a requirement is ambiguous, identify the ambiguity rather than silently
+  choosing an arbitrary mechanical solution.
+
+## Beads and task completion
+
+For design tasks, do NOT close the Beads issue yourself.
+
+When implementation is complete:
+- Check the acceptance criteria.
+- Record what was implemented.
+- Record any unmet requirements or problems as new Beads issues.
+- Leave the original issue open.
+- Return control to the user.
+
+The user decides when a design task is complete and when its Beads issue
+should be closed.
+
+Do not interpret successful OpenSCAD rendering as proof that the physical
+design is correct.
+
+## Stopping and iteration
+
+Do not repeatedly redesign or iterate on a task autonomously.
+
+After one implementation pass:
+- validate the OpenSCAD source;
+- check the acceptance criteria;
+- identify problems;
+- create Beads issues for unresolved problems;
+- stop.
+
+Do not implement newly discovered improvements during the same task.
+
+Only make additional changes when necessary to correct an immediate error
+introduced by the current implementation, such as a syntax error or a model
+that fails to render.
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
@@ -125,3 +229,4 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+

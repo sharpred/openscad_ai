@@ -1,0 +1,5 @@
+printer:
+  make: Bambu Lab
+  model: A1
+  process: FDM
+  default_nozzle: 0.4mm
