@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "openscad",
+  "project_id": "61e2aed9-f6c3-4e52-8d78-ed4c086b1a96"
+}
