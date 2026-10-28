@@ -62,6 +62,49 @@ doesn't actually reference is incomplete — it should not be handed to
 `cad-designer`; report the gap instead of guessing at missing dimensions or
 shape.
 
+### Measurement Sanity Check
+
+Before `orchestrator` delegates a job to `cad-designer`, it must check the
+stated measurements against each other and report any problem to the human.
+This costs nothing and happens before any agent pass is spawned.
+
+Check:
+
+* **Containment.** Every internal feature must fit inside the outer envelope
+  (`bore < hub < outside diameter`; every feature radius < outer radius). A
+  figure that cannot physically fit is the strongest signal available that a
+  radius has been written where a diameter was meant.
+* **Sum closure.** Do the stated thicknesses add up to the stated overall
+  dimension? If two measurements sum to a known overall, the datum they share
+  is confirmed. This is the cheapest way to settle a datum question and is
+  usually more reliable than reading a photograph.
+* **Datum declared.** Every depth or height must say what it is measured
+  from. "Depth 4.48" is not a measurement until the datum is stated.
+* **Spec text against photos.** Check countable and categorical claims —
+  how many spokes, whether a feature protrudes or is recessed. Where the
+  written spec and the photographs disagree, the photographs usually win,
+  but the human decides.
+* **Tolerance realism.** Flag any dimension landing near the FDM minimum
+  wall (0.8 mm, two perimeters at a 0.4 mm nozzle) as needing a human
+  decision, not a silent trade.
+
+Report impossibilities and ambiguities to the human and wait. Do not pick a
+resolution, and do not delegate a job whose measurements contradict each
+other — a design pass built on a bad datum is wasted work.
+
+A sanity check detects inconsistency, not error. A set of measurements can
+be perfectly self-consistent and still wrong. Passing this check is not
+evidence that the numbers are right.
+
+One optional addition, if you want the photo lesson in the file rather than only in bd remember — it fits naturally just above, in the existing Job Intake prose:
+
+Reference photos should be **cropped tightly to the part, not downscaled**.
+Images are resized server-side before tokens are counted, so a tightly
+cropped photo and a wide one cost the same — but the cropped one gives
+several times the usable detail. For measurement photos, frame the caliper
+display and the jaw contact point together, and state the figure in text as
+well.
+
 ## File Organisation
 
 All OpenSCAD source and generated artefacts produced by the agent must be

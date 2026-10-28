@@ -65,6 +65,6 @@
 # - linear.api_key  → use LINEAR_API_KEY env var instead
 # - github.token    → use GITHUB_TOKEN env var instead
 
-export.auto: true
+export.auto: false
 sync:
     remote: "git@github.com:sharpred/openscad_ai.git"

@@ -4,6 +4,8 @@
 *.db
 .beads-credential-key
 .beads/proxieddb/
+.beads/issues.jsonl
 output/*
 .aider*
 source/*
+.DS_Store
