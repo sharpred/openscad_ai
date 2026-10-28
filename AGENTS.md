@@ -1,7 +1,8 @@
 # Agent Instructions
 
 These rules apply to EVERY agent, every session. Role-specific orders live in
-each agent's own prompt file under `.opencode/agents/`.
+each agent's own prompt file under `.claude/agents/` (`orchestrator`,
+`cad-designer`, `cad-critic`).
 
 ## Project
 
@@ -46,6 +47,21 @@ When modifying `.scad` files:
 * Do not assume that successful compilation or rendering means the physical
   design is functionally correct.
 
+## Job Intake (`source/`)
+
+New work arrives as a job folder under `source/<job-slug>/`, containing one
+or more reference photos of the real object and a markdown file describing
+the job and referencing those photos by filename. `source/` is excluded
+from Git — like `output/`, it's disposable/local, not project history.
+
+The `orchestrator` agent scans `source/` for job folders that don't yet have
+a `.beads-issue` marker file (written once a design issue is created for
+that job) and kicks off the design -> critic -> human cycle described under
+"AI Models" below. A job with no photos, an empty spec, or photos the spec
+doesn't actually reference is incomplete — it should not be handed to
+`cad-designer`; report the gap instead of guessing at missing dimensions or
+shape.
+
 ## File Organisation
 
 All OpenSCAD source and generated artefacts produced by the agent must be
@@ -83,6 +99,14 @@ output/cable_clip-<beads-issue-id>.stl
 
 The Beads issue ID identifies the task that produced the files.
 
+The `.scad` and `.stl` are both real deliverables, not intermediate
+artefacts — once a job is accepted, the human edits either file directly
+for out-of-phase changes. A `.step` file is intended to join them
+eventually, but is not currently produced: the project's installed OpenSCAD
+(2021.01) has no STEP export support, and adding a newer build for that has
+been deliberately deferred (decided 2026-10-28). Do not attempt
+`--export-format=step`; it will fail against this build.
+
 If a design is revised as part of a different Beads issue, create a new file
 using the new issue ID rather than overwriting the previous output.
 
@@ -94,25 +118,44 @@ filenames such as `final`, `revised`, or `updated`.
 
 ## AI Models
 
-The project's Ollama server is available on the network.
+Design and review run locally via the Claude CLI, using three dedicated
+Claude Code agents (`.claude/agents/`):
 
-Use:
-
-* `openscad-design` for generating and modifying OpenSCAD.
-* `openscad-critic` for independent review.
+* `orchestrator` — scans `source/` for new jobs (see "Job Intake" above),
+  drives the Beads workflow below, and raises the human decision bead. Never
+  models, renders, or critiques anything itself.
+* `cad-designer` — generates and modifies OpenSCAD from source photos and
+  measurements. CAD/3D-printing expert; owns manufacturability, tolerances,
+  and FDM printability for the Bambu Lab A1.
+* `cad-critic` — adversarial industrial-design reviewer. Deliberately a
+  different model and a different kind of expert (form/proportion, not
+  manufacturing). Compares a rendered image of the model against the
+  original photos and spec, and does not touch printability.
 
 The designer should not assume its own output is correct.
 
-For significant geometry changes:
+For a design task, the normal flow (driven by `orchestrator`) is:
 
-1. Generate the change.
-2. Validate with OpenSCAD.
-3. Send the result to `openscad-critic`.
-4. Address genuine issues identified by the critic.
-5. Revalidate.
+1. `orchestrator` creates a design issue for the job and delegates to
+   `cad-designer`, which generates the model from the photos/measurements
+   and renders a PNG (`openscad -o render.png --render ...`), then validates
+   with OpenSCAD.
+2. `orchestrator` creates a review issue for `cad-critic`, depending on the
+   design issue (`bd dep add <critic-id> <design-id>`), carrying the render,
+   the source photos, and the spec.
+3. `cad-critic` reports visual/proportional discrepancies (or confirms the
+   render matches) — one pass, no auto-fixes, no closing the design issue.
+   `orchestrator` closes the review issue once the critique is recorded.
+4. `orchestrator` raises a human decision bead (`bd create ... -l human`
+   immediately followed by `bd defer`, per the convention in
+   `.claude/agents/orchestrator.md`) summarising the design and the critic's
+   findings. The human decides whether the design is accepted; comments on
+   that bead describing a change start a new design issue and a fresh pass
+   through this same cycle — not a reopening of the old one.
 
-However, the agent must follow the stopping and iteration rules below.
-The critic must not create an autonomous redesign loop.
+Every agent in this cycle must follow the stopping and iteration rules
+below. None of them may create an autonomous redesign loop or close the
+design issue itself; see "Design Acceptance" below.
 
 ## Design Acceptance
 
